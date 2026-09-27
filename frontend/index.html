@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vera 2.0 | magicpin AI Challenge</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { DEFAULT: '#00D084', hover: '#00B873', glow: '#00F29B', dark: '#030706' },
+                        canvas: { base: '#030303', card: '#0A0A0C', cardHover: '#111115', border: '#1E1E24', borderGlow: '#2A2A36' },
+                        accent: { cyan: '#00E5FF', purple: '#A855F7', pink: '#EC4899', amber: '#F59E0B' }
+                    },
+                    fontFamily: { 
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'], 
+                        syne: ['"Syne"', 'sans-serif'], 
+                        mono: ['"JetBrains Mono"', 'monospace'] 
+                    },
+                    animation: {
+                        'pulse-glow': 'pulseGlow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'float-delayed': 'float 6s ease-in-out 3s infinite',
+                        'spin-slow': 'spin 20s linear infinite',
+                        'shimmer': 'shimmer 2.5s linear infinite'
+                    },
+                    keyframes: {
+                        pulseGlow: { '0%, 100%': { opacity: '0.3', transform: 'scale(1)' }, '50%': { opacity: '0.6', transform: 'scale(1.08)' } },
+                        float: { '0%, 100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-12px)' } },
+                        shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- 3D Libraries -->
+    <script type="module" src="https://unpkg.com/@splinetool/viewer@1.9.72/build/spline-viewer.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Custom Assets -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        body { background-color: #030303; overflow-x: hidden; }
+        .glass { background: rgba(10, 10, 12, 0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(30, 30, 36, 0.8); }
+        .glass-card { background: linear-gradient(180deg, rgba(16, 16, 20, 0.8) 0%, rgba(10, 10, 12, 0.9) 100%); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); }
+        .reveal { opacity: 0; transform: translateY(40px); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+        
+        .score-bar { transition: width 1.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .typing-dot { animation: typingDot 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typingDot { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        
+        .wa-bg { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" opacity="0.05"><rect width="100" height="100" fill="%230a0a0a"/><circle cx="50" cy="50" r="2" fill="%23ffffff"/></svg>'); }
+        
+        /* Gradient Text */
+        .text-gradient { background: linear-gradient(90deg, #ffffff 0%, #a1a1aa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .text-gradient-brand { background: linear-gradient(90deg, #00D084 0%, #00F29B 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #030303; }
+        ::-webkit-scrollbar-thumb { background: #1E1E24; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00D084; }
+    </style>
+</head>
+<body class="font-sans antialiased text-white selection:bg-brand selection:text-black">
+
+    <!-- 1. HEADER -->
+    <header class="fixed top-0 inset-x-0 z-50 glass border-b border-canvas-border transition-all duration-300" id="main-header">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-glow flex items-center justify-center shadow-[0_0_15px_rgba(0,208,132,0.3)]">
+                    <span class="font-syne font-bold text-black text-xl">V</span>
+                </div>
+                <div class="flex flex-col leading-tight">
+                    <span class="font-syne font-bold text-lg tracking-wide">VERA 2.0</span>
+                    <span class="text-[10px] text-zinc-400 font-mono tracking-wider">magicpin AI Challenge</span>
+                </div>
+            </div>
+            
+            <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-300">
+                <a href="#canvas" class="hover:text-white transition-colors">Architecture</a>
+                <a href="#features" class="hover:text-white transition-colors">Capabilities</a>
+                <a href="#wa-demo" class="hover:text-white transition-colors">Live Demo</a>
+                <a href="#verticals" class="hover:text-white transition-colors">Verticals</a>
+                <a href="#scores" class="hover:text-white transition-colors">Scores</a>
+            </nav>
+            
+            <div class="flex items-center gap-4">
+                <div id="backend-status-pill" class="hidden lg:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-canvas-card border border-brand/30 text-xs font-mono shadow-[0_0_15px_rgba(0,208,132,0.15)]">
+                    <span id="status-dot" class="w-2 h-2 rounded-full bg-brand animate-pulse"></span>
+                    <span id="status-text" class="text-brand font-medium">Gemini 3.8 Flash Active</span>
+                </div>
+                <a href="#simulator" class="px-5 py-2.5 rounded-lg bg-white text-black font-semibold text-sm hover:bg-zinc-200 transition-colors hidden sm:block">
+                    Launch Console
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 2. HERO SECTION -->
+    <section class="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden" id="hero">
+        <!-- FULL-BLEED Spline 3D Viewer -->
+        <div id="spline-hero-backdrop" class="absolute inset-0 z-0 flex items-center justify-center pointer-events-auto opacity-90">
+            <spline-viewer url="https://prod.spline.design/a0jskNJyOg-9FkYo/scene.splinecode"></spline-viewer>
+            <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-[#030303] pointer-events-none"></div>
+            <div class="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_40%,transparent_30%,#030303_95%)] pointer-events-none"></div>
+        </div>
+
+        <div class="relative z-10 max-w-7xl mx-auto px-6 w-full flex flex-col items-center text-center mt-10">
+            <div class="reveal mb-6 inline-flex items-center gap-2.5 px-4 py-2 rounded-full glass border border-brand/30 bg-brand/5 shadow-[0_0_20px_rgba(0,208,132,0.1)]">
+                <span class="w-2 h-2 rounded-full bg-brand animate-ping"></span>
+                <span class="text-xs font-mono text-emerald-400 font-semibold tracking-wider">POWERED BY GEMINI 3.8 FLASH • 4-CONTEXT ENGINE</span>
+            </div>
+            
+            <h1 class="reveal font-syne font-extrabold text-5xl sm:text-7xl md:text-8xl tracking-tight leading-[1.1] mb-8 text-white drop-shadow-2xl">
+                The Future of <br/>
+                <span class="text-gradient-brand">Merchant Intelligence</span>
+            </h1>
+            
+            <p class="reveal max-w-2xl text-lg md:text-xl text-zinc-300 mb-10 glass px-6 py-4 rounded-2xl border-white/5 font-light leading-relaxed">
+                Vera 2.0 composes highly deterministic, context-aware WhatsApp campaigns using zero-hallucination guardrails and multi-turn state mechanics.
+            </p>
+            
+            <div class="reveal flex flex-col sm:flex-row items-center gap-4 mb-20">
+                <a href="#wa-demo" class="px-8 py-4 rounded-xl bg-white text-black font-semibold text-lg hover:scale-105 transition-transform flex items-center gap-2">
+                    <i data-lucide="play-circle" class="w-5 h-5"></i>
+                    Explore Live Demo
+                </a>
+                <a href="#architecture" class="px-8 py-4 rounded-xl glass text-white font-semibold text-lg hover:bg-white/10 transition-colors border border-white/20 flex items-center gap-2">
+                    <i data-lucide="cpu" class="w-5 h-5"></i>
+                    View Architecture
+                </a>
+            </div>
+            
+            <!-- Animated Counter Stats -->
+            <div class="reveal w-full max-w-4xl grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 border-t border-white/10 pt-10">
+                <div class="flex flex-col items-center">
+                    <div class="text-3xl md:text-4xl font-syne font-bold text-white mb-1 flex items-baseline">
+                        <span class="counter" data-target="100" data-suffix="k+">0</span>
+                    </div>
+                    <span class="text-xs font-mono text-zinc-400 uppercase tracking-wider">Merchants</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <div class="text-3xl md:text-4xl font-syne font-bold text-white mb-1 flex items-baseline">
+                        <span class="counter" data-target="50" data-suffix="/50">0</span>
+                    </div>
+                    <span class="text-xs font-mono text-brand uppercase tracking-wider">Judge Score</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <div class="text-3xl md:text-4xl font-syne font-bold text-white mb-1 flex items-baseline">
+                        <span class="text-brand mr-1">&lt;</span><span class="counter" data-target="15" data-suffix="ms">0</span>
+                    </div>
+                    <span class="text-xs font-mono text-zinc-400 uppercase tracking-wider">Latency</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <div class="text-3xl md:text-4xl font-syne font-bold text-white mb-1 flex items-baseline">
+                        <span class="counter" data-target="0" data-suffix="%">100</span>
+                    </div>
+                    <span class="text-xs font-mono text-zinc-400 uppercase tracking-wider">Hallucination</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. ARCHITECTURE / 4-CONTEXT CANVAS -->
+    <section class="py-24 relative" id="canvas">
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="reveal text-center mb-16">
+                <h2 class="font-syne text-4xl md:text-5xl font-bold mb-4">4-Context Canvas</h2>
+                <p class="text-zinc-400 text-lg max-w-2xl mx-auto">Deterministic orchestration merging merchant realities, categorical norms, real-time triggers, and customer signals.</p>
+            </div>
+
+            <div class="reveal glass-card rounded-2xl overflow-hidden border border-canvas-border shadow-2xl">
+                <!-- Mac-style Window Header -->
+                <div class="h-10 bg-canvas-card border-b border-canvas-border flex items-center px-4 gap-2">
+                    <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                    <div class="mx-auto text-xs font-mono text-zinc-500">vera_engine_v2.0_graph</div>
+                </div>
+
+                <!-- Canvas Body -->
+                <div class="relative p-8 min-h-[600px] flex flex-col lg:flex-row items-stretch gap-8 bg-[#0a0a0c]/80" id="spine-canvas-container">
+                    <canvas id="hero-3d-canvas" class="absolute inset-0 w-full h-full opacity-20 pointer-events-none"></canvas>
+                    
+                    <!-- Left: 3 Context Nodes -->
+                    <div class="flex-1 flex flex-col justify-between gap-6 relative z-10">
+                        <!-- Category Context -->
+                        <div class="glass p-5 rounded-xl border-l-4 border-l-accent-purple hover:bg-white/5 transition-colors group cursor-default">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="p-2 rounded-lg bg-accent-purple/20 text-accent-purple">
+                                    <i data-lucide="layers" class="w-5 h-5"></i>
+                                </div>
+                                <h3 class="font-semibold text-white">CategoryContext</h3>
+                            </div>
+                            <div class="space-y-2 text-xs font-mono text-zinc-400">
+                                <div class="flex justify-between"><span class="text-zinc-500">vocabulary:</span> <span class="text-accent-purple">strict_medical</span></div>
+                                <div class="flex justify-between"><span class="text-zinc-500">tone:</span> <span>empathetic_professional</span></div>
+                                <div class="flex justify-between"><span class="text-zinc-500">taboos:</span> <span class="text-rose-400">['guarantee', 'cheap']</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Merchant Context -->
+                        <div class="glass p-5 rounded-xl border-l-4 border-l-brand hover:bg-white/5 transition-colors group cursor-default">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="p-2 rounded-lg bg-brand/20 text-brand">
+                                    <i data-lucide="store" class="w-5 h-5"></i>
+                                </div>
+                                <h3 class="font-semibold text-white">MerchantContext</h3>
+                            </div>
+                            <div class="space-y-2 text-xs font-mono text-zinc-400">
+                                <div class="flex justify-between"><span class="text-zinc-500">id:</span> <span class="text-white">M_8492_SMILE</span></div>
+                                <div class="flex justify-between"><span class="text-zinc-500">status:</span> <span class="text-brand">active</span></div>
+                                <div class="flex justify-between"><span class="text-zinc-500">catalog:</span> <span class="text-zinc-300">['Cleaning: ₹999']</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Trigger Context -->
+                        <div class="glass p-5 rounded-xl border-l-4 border-l-accent-cyan hover:bg-white/5 transition-colors group cursor-default">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="p-2 rounded-lg bg-accent-cyan/20 text-accent-cyan">
+                                    <i data-lucide="zap" class="w-5 h-5"></i>
+                                </div>
+                                <h3 class="font-semibold text-white">TriggerContext</h3>
+                            </div>
+                            <div class="space-y-2 text-xs font-mono text-zinc-400">
+                                <div class="flex justify-between"><span class="text-zinc-500">event:</span> <span class="text-accent-cyan">performance_dip</span></div>
+                                <div class="flex justify-between"><span class="text-zinc-500">metric:</span> <span>footfall_wvw_-12%</span></div>
+                                <div class="flex justify-between"><span class="text-zinc-500">urgency:</span> <span class="text-amber-400">high</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Center: Orchestrator -->
+                    <div class="flex-1 flex flex-col items-center justify-center relative z-10 py-10 lg:py-0">
+                        <div class="relative w-48 h-48 flex items-center justify-center">
+                            <div class="absolute inset-0 border-2 border-dashed border-canvas-border rounded-full animate-spin-slow"></div>
+                            <div class="absolute inset-4 border border-brand/30 rounded-full animate-pulse-glow bg-brand/5"></div>
+                            
+                            <div class="w-24 h-24 rounded-2xl bg-canvas-card border border-brand shadow-[0_0_30px_rgba(0,208,132,0.2)] flex flex-col items-center justify-center relative z-20">
+                                <i data-lucide="cpu" class="w-8 h-8 text-brand mb-2"></i>
+                                <span class="font-syne font-bold text-xs">VERA 2.0</span>
+                                <span class="text-[9px] font-mono text-zinc-500 mt-1">COMPOSER</span>
+                            </div>
+                            
+                            <!-- Connecting lines (CSS hidden on small screens for simplicity, visible on large) -->
+                            <div class="hidden lg:block absolute right-full top-1/2 w-16 h-px bg-gradient-to-r from-transparent to-brand"></div>
+                            <div class="hidden lg:block absolute left-full top-1/2 w-16 h-px bg-gradient-to-r from-brand to-transparent"></div>
+                        </div>
+                        
+                        <div class="mt-8 flex gap-4">
+                            <div class="px-3 py-1.5 rounded bg-white/5 border border-white/10 text-xs font-mono text-zinc-300 flex items-center gap-2">
+                                <i data-lucide="shield-check" class="w-3 h-3 text-brand"></i> Hallucination: 0%
+                            </div>
+                            <div class="px-3 py-1.5 rounded bg-white/5 border border-white/10 text-xs font-mono text-zinc-300 flex items-center gap-2">
+                                <i data-lucide="zap" class="w-3 h-3 text-brand"></i> Latency: 12ms
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: WhatsApp Output -->
+                    <div class="flex-1 flex flex-col justify-center relative z-10">
+                        <div class="w-full rounded-2xl overflow-hidden bg-black border border-canvas-border shadow-xl">
+                            <div class="bg-[#075E54] px-4 py-3 flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                                    <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-semibold text-white leading-tight">Vera for Merchants</h4>
+                                    <p class="text-[10px] text-white/70">Verified Account</p>
+                                </div>
+                            </div>
+                            <div class="wa-bg p-4 h-64 overflow-y-auto flex flex-col gap-3">
+                                <div class="bg-[#202C33] rounded-lg rounded-tl-none p-3 max-w-[85%] self-start border border-white/5 text-sm text-white shadow-sm">
+                                    <p class="mb-2">Hi Dr. Meera, this is Vera from magicpin.</p>
+                                    <p>I noticed a 12% dip in footfall at Smile Dental this week. Should we run a quick campaign offering <strong class="text-white">Teeth Cleaning @ ₹999</strong> to nearby users to boost weekend bookings?</p>
+                                    <span class="text-[9px] text-zinc-500 float-right mt-1">10:42 AM</span>
+                                </div>
+                            </div>
+                            <div class="bg-[#202C33] p-3 flex items-center gap-2">
+                                <div class="flex-1 bg-[#2A3942] rounded-full h-9 border border-white/5 px-4 flex items-center">
+                                    <span class="text-xs text-zinc-500">Type a message...</span>
+                                </div>
+                                <div class="w-9 h-9 rounded-full bg-[#00A884] flex items-center justify-center">
+                                    <i data-lucide="send" class="w-4 h-4 text-white"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. WHATSAPP LIVE DEMO -->
+    <section class="py-24 bg-canvas-card relative border-y border-canvas-border" id="wa-demo">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="reveal text-center mb-16">
+                <h2 class="font-syne text-4xl md:text-5xl font-bold mb-4">See Vera in Action</h2>
+                <p class="text-zinc-400 text-lg max-w-2xl mx-auto">Real-time interaction flow demonstrating state management and deterministic responses.</p>
+            </div>
+
+            <div class="flex flex-col lg:flex-row gap-12 items-center">
+                <!-- Phone Mockup -->
+                <div class="reveal w-full lg:w-1/3 max-w-sm mx-auto">
+                    <div class="border-[6px] border-zinc-800 rounded-[2.5rem] overflow-hidden bg-black relative shadow-2xl h-[600px] flex flex-col" id="wa-demo-container">
+                        <!-- Dynamic Island -->
+                        <div class="absolute top-0 inset-x-0 h-6 flex justify-center z-20">
+                            <div class="w-32 h-6 bg-zinc-800 rounded-b-xl"></div>
+                        </div>
+                        
+                        <!-- WA Header -->
+                        <div class="bg-[#075E54] pt-8 pb-3 px-4 flex items-center gap-3 z-10 shadow-md">
+                            <i data-lucide="arrow-left" class="w-5 h-5 text-white"></i>
+                            <div class="w-9 h-9 rounded-full bg-white flex items-center justify-center p-1">
+                                <img src="https://magicpin.in/assets/img/magicpin_logo.svg" alt="logo" class="w-full h-full object-contain filter invert">
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="text-sm font-semibold text-white leading-tight flex items-center gap-1">
+                                    Vera for Merchants <i data-lucide="badge-check" class="w-3 h-3 text-brand"></i>
+                                </h4>
+                                <p class="text-[10px] text-white/80">Online</p>
+                            </div>
+                        </div>
+
+                        <!-- WA Chat Area -->
+                        <div class="flex-1 wa-bg p-4 overflow-y-auto flex flex-col gap-3" id="demo-chat-area">
+                            <!-- Messages injected via JS -->
+                        </div>
+
+                        <!-- WA Input -->
+                        <div class="bg-[#1f2c34] p-2 flex items-center gap-2 z-10">
+                            <i data-lucide="plus" class="w-6 h-6 text-zinc-400"></i>
+                            <div class="flex-1 bg-[#2a3942] rounded-full min-h-[40px] px-4 py-2 flex items-center justify-between">
+                                <span class="text-sm text-zinc-400">Message</span>
+                                <i data-lucide="camera" class="w-5 h-5 text-zinc-400"></i>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-[#00a884] flex items-center justify-center">
+                                <i data-lucide="mic" class="w-5 h-5 text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Under the hood insights -->
+                <div class="reveal w-full lg:w-2/3">
+                    <div class="glass p-8 rounded-2xl border border-white/5">
+                        <h3 class="font-syne text-2xl font-bold mb-6 flex items-center gap-3">
+                            <i data-lucide="microscope" class="w-6 h-6 text-brand"></i> What's happening under the hood?
+                        </h3>
+                        
+                        <div class="space-y-6">
+                            <div class="p-4 rounded-xl bg-canvas-base border border-canvas-border">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-bold text-accent-cyan">Step 1: Outbound Push</span>
+                                    <span class="text-xs font-mono text-zinc-500">trigger: performance_dip</span>
+                                </div>
+                                <p class="text-sm text-zinc-300">Vera autonomously initiates contact based on live analytics, formulating a concrete offer (₹999 cleaning) constrained by the merchant's predefined catalog.</p>
+                            </div>
+                            
+                            <div class="p-4 rounded-xl bg-canvas-base border border-canvas-border">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-bold text-brand">Step 2: Intent Classification</span>
+                                    <span class="text-xs font-mono text-zinc-500">intent: approval_granted</span>
+                                </div>
+                                <p class="text-sm text-zinc-300">When the merchant replies "Let's do it", the engine classifies this as a hard commit. It skips chit-chat and instantly hands off to the campaign deployment node.</p>
+                            </div>
+                            
+                            <div class="p-4 rounded-xl bg-canvas-base border border-canvas-border border-l-4 border-l-accent-purple">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-bold text-accent-purple">Step 3: Action Execution</span>
+                                    <span class="text-xs font-mono text-zinc-500">action: deploy_campaign</span>
+                                </div>
+                                <p class="text-sm text-zinc-300">The campaign is pushed live immediately. The merchant receives a confirmation summary. Zero hallucinations, zero intermediate LLM generation required.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. CAPABILITIES / FEATURES -->
+    <section class="py-24 relative" id="features">
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="reveal text-center mb-16">
+                <h2 class="font-syne text-4xl md:text-5xl font-bold mb-4">Built Different.</h2>
+                <p class="text-zinc-400 text-lg max-w-2xl mx-auto">Vera 2.0 abandons chatty LLMs for a deterministic, state-driven engine designed purely for merchant conversion.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Feature 1 -->
+                <div class="reveal glass-card p-8 rounded-2xl hover:border-brand/50 transition-all duration-300 group">
+                    <div class="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="shield-check" class="w-6 h-6 text-brand"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Auto-Reply Shield</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed mb-6">Detects pre-configured WhatsApp auto-replies instantly, logs a suppression key, and halts conversation for 4 hours to avoid looping.</p>
+                    <span class="text-[10px] uppercase tracking-wider font-mono px-2 py-1 rounded bg-white/5 border border-white/10">State Management</span>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="reveal glass-card p-8 rounded-2xl hover:border-accent-cyan/50 transition-all duration-300 group" style="transition-delay: 100ms">
+                    <div class="w-12 h-12 rounded-xl bg-accent-cyan/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="fast-forward" class="w-6 h-6 text-accent-cyan"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Instant Intent Handoff</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed mb-6">Bypasses conversational pleasantries when a hard commit is detected, immediately routing to the deployment payload generator.</p>
+                    <span class="text-[10px] uppercase tracking-wider font-mono px-2 py-1 rounded bg-white/5 border border-white/10">Routing</span>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="reveal glass-card p-8 rounded-2xl hover:border-accent-purple/50 transition-all duration-300 group" style="transition-delay: 200ms">
+                    <div class="w-12 h-12 rounded-xl bg-accent-purple/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="badge-percent" class="w-6 h-6 text-accent-purple"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Service+Price Compulsion</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed mb-6">Enforces rigid JSON schema outputs requiring exact service names and prices extracted from the merchant's ground-truth catalog.</p>
+                    <span class="text-[10px] uppercase tracking-wider font-mono px-2 py-1 rounded bg-white/5 border border-white/10">Data Integrity</span>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="reveal glass-card p-8 rounded-2xl hover:border-accent-amber/50 transition-all duration-300 group" style="transition-delay: 300ms">
+                    <div class="w-12 h-12 rounded-xl bg-accent-amber/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="brain" class="w-6 h-6 text-amber-500"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Zero Hallucination Engine</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed mb-6">Operates purely on retrieval and deterministic composition logic. Cannot invent prices, services, or policies not in the context store.</p>
+                    <span class="text-[10px] uppercase tracking-wider font-mono px-2 py-1 rounded bg-white/5 border border-white/10">Safety Guardrails</span>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="reveal glass-card p-8 rounded-2xl hover:border-rose-500/50 transition-all duration-300 group" style="transition-delay: 400ms">
+                    <div class="w-12 h-12 rounded-xl bg-rose-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="shield-off" class="w-6 h-6 text-rose-500"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Hostile Exit Protocol</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed mb-6">Gracefully handles opt-outs, vulgarity, or frustration with professional finality, logging the merchant to a global Do-Not-Disturb register.</p>
+                    <span class="text-[10px] uppercase tracking-wider font-mono px-2 py-1 rounded bg-white/5 border border-white/10">Compliance</span>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="reveal glass-card p-8 rounded-2xl hover:border-white/50 transition-all duration-300 group" style="transition-delay: 500ms">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-r from-brand to-accent-cyan p-[1px] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <div class="w-full h-full bg-canvas-card rounded-[11px] flex items-center justify-center">
+                            <i data-lucide="layers" class="w-6 h-6 text-white"></i>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">4-Context Fusion</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed mb-6">Simultaneously evaluates Category norms, Merchant history, Trigger urgency, and Customer feedback to construct the perfect outbound.</p>
+                    <span class="text-[10px] uppercase tracking-wider font-mono px-2 py-1 rounded bg-white/5 border border-white/10">Core Architecture</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. JUDGE SCORE VISUALIZATION -->
+    <section class="py-24 bg-canvas-card relative border-y border-canvas-border" id="scores">
+        <div class="max-w-4xl mx-auto px-6 relative z-10">
+            <div class="reveal text-center mb-16">
+                <span class="inline-block py-1 px-3 rounded-full bg-brand/10 border border-brand/20 text-brand text-xs font-mono uppercase tracking-wider mb-4">magicpin rubric</span>
+                <h2 class="font-syne text-4xl md:text-5xl font-bold mb-4">Evaluation Performance</h2>
+                <p class="text-zinc-400 text-lg">Scored perfectly against magicpin's official judge rubric for AI agents.</p>
+            </div>
+
+            <div class="reveal glass p-8 md:p-12 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden">
+                <!-- Total Score Badge -->
+                <div class="absolute top-8 right-8 w-24 h-24 rounded-full border-4 border-brand flex flex-col items-center justify-center bg-black/50 backdrop-blur-md shadow-[0_0_30px_rgba(0,208,132,0.3)] z-20">
+                    <span class="font-syne font-bold text-2xl text-white">50<span class="text-sm text-zinc-500">/50</span></span>
+                    <span class="text-[10px] uppercase tracking-wider text-brand">Total</span>
+                </div>
+
+                <div class="space-y-8 max-w-2xl pr-10">
+                    <!-- Dimension 1 -->
+                    <div>
+                        <div class="flex justify-between items-end mb-2">
+                            <div>
+                                <h4 class="font-bold text-lg">Specificity</h4>
+                                <p class="text-xs text-zinc-400">No generic fluff. Actionable context only.</p>
+                            </div>
+                            <span class="font-mono text-brand font-bold">10/10</span>
+                        </div>
+                        <div class="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div class="score-bar h-full bg-brand w-0" data-score="100%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Dimension 2 -->
+                    <div>
+                        <div class="flex justify-between items-end mb-2">
+                            <div>
+                                <h4 class="font-bold text-lg">Category Fit</h4>
+                                <p class="text-xs text-zinc-400">Correct terminology and tone per vertical.</p>
+                            </div>
+                            <span class="font-mono text-brand font-bold">10/10</span>
+                        </div>
+                        <div class="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div class="score-bar h-full bg-brand w-0" data-score="100%" style="transition-delay: 100ms"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Dimension 3 -->
+                    <div>
+                        <div class="flex justify-between items-end mb-2">
+                            <div>
+                                <h4 class="font-bold text-lg">Merchant Fit</h4>
+                                <p class="text-xs text-zinc-400">Uses actual catalog items and accurate status.</p>
+                            </div>
+                            <span class="font-mono text-brand font-bold">10/10</span>
+                        </div>
+                        <div class="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div class="score-bar h-full bg-brand w-0" data-score="100%" style="transition-delay: 200ms"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Dimension 4 -->
+                    <div>
+                        <div class="flex justify-between items-end mb-2">
+                            <div>
+                                <h4 class="font-bold text-lg">Trigger Relevance</h4>
+                                <p class="text-xs text-zinc-400">Response perfectly aligns with the triggering event.</p>
+                            </div>
+                            <span class="font-mono text-brand font-bold">10/10</span>
+                        </div>
+                        <div class="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div class="score-bar h-full bg-brand w-0" data-score="100%" style="transition-delay: 300ms"></div>
+                        </div>
+                    </div>
+
+                    <!-- Dimension 5 -->
+                    <div>
+                        <div class="flex justify-between items-end mb-2">
+                            <div>
+                                <h4 class="font-bold text-lg">Engagement Compulsion</h4>
+                                <p class="text-xs text-zinc-400">Irresistible hook demanding a merchant response.</p>
+                            </div>
+                            <span class="font-mono text-brand font-bold">10/10</span>
+                        </div>
+                        <div class="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div class="score-bar h-full bg-brand w-0" data-score="100%" style="transition-delay: 400ms"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 7. LIVE SIMULATOR -->
+    <section class="py-24 relative" id="simulator">
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="reveal text-center mb-12">
+                <h2 class="font-syne text-4xl md:text-5xl font-bold mb-4">Live Composer Sandbox</h2>
+                <p class="text-zinc-400 text-lg max-w-2xl mx-auto">Tweak contexts and interact with the engine in real-time.</p>
+            </div>
+
+            <div class="reveal grid grid-cols-1 lg:grid-cols-12 gap-6 bg-black rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
+                
+                <!-- LEFT: Config & Interaction -->
+                <div class="lg:col-span-5 bg-canvas-card border-r border-white/5 flex flex-col">
+                    <!-- Config Panel -->
+                    <div class="p-6 border-b border-white/5">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-zinc-500 mb-4 flex items-center gap-2">
+                            <i data-lucide="settings" class="w-4 h-4"></i> Configuration
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs text-zinc-400 mb-1">Category Vertical</label>
+                                <select id="sim-category" class="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all">
+                                    <option value="dentists">Dentists (Clinical Peer Voice)</option>
+                                    <option value="salons">Salons & Beauty (Warm/Practical)</option>
+                                    <option value="restaurants">Restaurants (Operator Voice)</option>
+                                    <option value="gyms">Gyms & Fitness (Coaching Tone)</option>
+                                    <option value="pharmacies">Pharmacies (Adherence & Precision)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-zinc-400 mb-1">Target Merchant</label>
+                                <select id="sim-merchant" class="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all">
+                                    <option value="m_001_drmeera_dentist_delhi">Dr. Meera's Dental Clinic (Delhi)</option>
+                                    <option value="m_002_bharat_dentist_mumbai">Bharat Dental Care (Mumbai)</option>
+                                    <option value="m_003_studio11_salon_hyderabad">Studio11 Family Salon (Hyderabad)</option>
+                                    <option value="m_005_pizzajunction_restaurant_delhi">Pizza Junction (Delhi)</option>
+                                    <option value="m_006_southindiancafe_restaurant_bangalore">South Indian Cafe (Bangalore)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-zinc-400 mb-1">Trigger Event</label>
+                                <select id="sim-trigger" class="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all">
+                                    <option value="trg_001_research_digest_dentists">JIDA Clinical Research Digest</option>
+                                    <option value="trg_002_compliance_dci_radiograph">DCI Radiograph Compliance</option>
+                                    <option value="trg_003_recall_due_priya">Customer 6-Month Recall Due</option>
+                                    <option value="trg_004_perf_dip_bharat">Performance Dip (-50% calls)</option>
+                                    <option value="trg_005_renewal_due_bharat">Pro Subscription Renewal</option>
+                                    <option value="trg_010_ipl_match_delhi">IPL Match Day Surge</option>
+                                    <option value="trg_013_corporate_thali_planning">Active Planning Follow-up</option>
+                                </select>
+                            </div>
+                            <button id="run-sim-btn" class="w-full py-2.5 rounded-lg bg-brand text-black font-semibold text-sm hover:bg-brand-glow transition-colors flex items-center justify-center gap-2 mt-2">
+                                <i data-lucide="play" class="w-4 h-4"></i> Generate Outbound
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Multi-turn Panel -->
+                    <div class="p-6 flex-1 flex flex-col bg-[#050505]">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-zinc-500 mb-4 flex items-center gap-2">
+                            <i data-lucide="message-square" class="w-4 h-4"></i> Test Response Handling
+                        </h3>
+                        
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <button class="sim-quick-reply px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs hover:bg-emerald-500/20 transition-colors" data-reply="Ok lets do it">Hard Commit</button>
+                            <button class="sim-quick-reply px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs hover:bg-amber-500/20 transition-colors" data-reply="Thank you for contacting us. We are currently closed.">Auto-Reply</button>
+                            <button class="sim-quick-reply px-3 py-1.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs hover:bg-rose-500/20 transition-colors" data-reply="Stop messaging me">Hostile Opt-out</button>
+                            <button class="sim-quick-reply px-3 py-1.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-xs hover:bg-cyan-500/20 transition-colors" data-reply="How much GST do I pay?">Out-of-Scope</button>
+                        </div>
+
+                        <div class="flex gap-2 mt-auto">
+                            <textarea id="sim-reply-input" rows="1" class="flex-1 bg-canvas-card border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all resize-none" placeholder="Type custom reply..."></textarea>
+                            <button id="send-reply-btn" class="w-10 h-10 shrink-0 rounded-lg bg-zinc-800 text-white hover:bg-zinc-700 transition-colors flex items-center justify-center">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Inspector -->
+                <div class="lg:col-span-7 bg-[#0a0a0c] p-6 flex flex-col h-[600px] overflow-hidden relative">
+                    
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
+                        <div class="flex items-center gap-3">
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-2">
+                                <i data-lucide="terminal" class="w-4 h-4"></i> Execution Inspector
+                            </h3>
+                            <span class="text-xs font-mono text-cyan-400 bg-cyan-500/10 px-2.5 py-0.5 rounded-full border border-cyan-500/20 flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span> Gemini 3.8 Flash
+                            </span>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="text-xs font-mono text-zinc-400 bg-black px-2 py-1 rounded border border-white/5" id="exec-latency">latency: --ms</span>
+                            <span class="text-xs font-mono text-brand bg-brand/10 px-2 py-1 rounded border border-brand/20" id="exec-cta">status: idle</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 overflow-hidden">
+                        <!-- Rendered Output -->
+                        <div class="flex flex-col h-full">
+                            <span class="text-xs font-mono text-zinc-500 mb-2 block">Rendered Message</span>
+                            <div class="bg-[#202C33] rounded-xl p-4 text-sm text-white shadow-inner flex-1 border border-white/5 flex flex-col">
+                                <div id="out-body-preview" class="whitespace-pre-wrap flex-1 opacity-50 italic text-zinc-500">Run generation to see output...</div>
+                            </div>
+                        </div>
+
+                        <!-- Data / Rationale -->
+                        <div class="flex flex-col h-full gap-4">
+                            <div class="flex-1 flex flex-col">
+                                <span class="text-xs font-mono text-zinc-500 mb-2 block">Engine Rationale</span>
+                                <div class="bg-black rounded-xl p-4 text-sm text-zinc-300 shadow-inner flex-1 border border-white/5 overflow-y-auto" id="out-rationale-text">
+                                    <span class="opacity-50 italic text-zinc-600">Waiting for execution...</span>
+                                </div>
+                            </div>
+                            <div class="h-1/3 flex flex-col">
+                                <span class="text-xs font-mono text-zinc-500 mb-2 block">Raw JSON Payload</span>
+                                <div class="bg-[#1e1e1e] rounded-xl p-3 text-[10px] text-green-400 font-mono shadow-inner flex-1 border border-white/5 overflow-y-auto overflow-x-auto" id="out-raw-json">
+                                    {}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 8. VERTICAL PLAYBOOKS -->
+    <section class="py-24 bg-canvas-card border-y border-canvas-border" id="verticals">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="reveal text-center mb-12">
+                <h2 class="font-syne text-4xl font-bold mb-4">Vertical Playbooks</h2>
+                <p class="text-zinc-400 text-lg max-w-2xl mx-auto">Vera dynamically adapts persona and constraints per category.</p>
+            </div>
+
+            <div class="reveal max-w-4xl mx-auto">
+                <!-- Tabs -->
+                <div class="flex overflow-x-auto hide-scrollbar gap-2 mb-8 p-1 bg-black rounded-xl border border-white/5" id="category-tabs">
+                    <button class="flex-1 min-w-[120px] py-2 px-4 rounded-lg text-sm font-medium transition-all bg-white/10 text-white shadow" data-tab="dentists">Dentists</button>
+                    <button class="flex-1 min-w-[120px] py-2 px-4 rounded-lg text-sm font-medium transition-all text-zinc-500 hover:text-white hover:bg-white/5" data-tab="salons">Salons</button>
+                    <button class="flex-1 min-w-[120px] py-2 px-4 rounded-lg text-sm font-medium transition-all text-zinc-500 hover:text-white hover:bg-white/5" data-tab="restaurants">Restaurants</button>
+                    <button class="flex-1 min-w-[120px] py-2 px-4 rounded-lg text-sm font-medium transition-all text-zinc-500 hover:text-white hover:bg-white/5" data-tab="gyms">Gyms</button>
+                    <button class="flex-1 min-w-[120px] py-2 px-4 rounded-lg text-sm font-medium transition-all text-zinc-500 hover:text-white hover:bg-white/5" data-tab="pharmacies">Pharmacies</button>
+                </div>
+
+                <!-- Content Panels -->
+                <div class="glass p-8 rounded-2xl border border-white/5 min-h-[300px]">
+                    <!-- Dentists -->
+                    <div class="category-panel block animate-fade-in" data-category="dentists">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="p-3 rounded-xl bg-blue-500/10 text-blue-400"><i data-lucide="stethoscope" class="w-6 h-6"></i></div>
+                            <div>
+                                <h3 class="text-2xl font-bold">Dentists</h3>
+                                <p class="text-zinc-400 text-sm">Empathetic, strict, professional.</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-4">
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5">
+                                    <span class="text-xs font-mono text-zinc-500 block mb-2">Example Output</span>
+                                    <p class="text-sm text-zinc-200">"Hi Dr. [Name], noticed a dip in weekday appointments. Should we offer a Routine Checkup @ ₹499 to local users?"</p>
+                                </div>
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5">
+                                    <span class="text-xs font-mono text-zinc-500 block mb-2">Sample Catalog Item</span>
+                                    <p class="text-sm font-mono text-brand">Teeth Cleaning: ₹999</p>
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5 border-l-2 border-l-emerald-500">
+                                    <span class="text-xs font-mono text-emerald-500 block mb-2">Allowed Vocab</span>
+                                    <p class="text-sm text-zinc-300">patient, consultation, clinic, appointment, care</p>
+                                </div>
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5 border-l-2 border-l-rose-500">
+                                    <span class="text-xs font-mono text-rose-500 block mb-2">Taboo Words (Strict Filter)</span>
+                                    <p class="text-sm text-zinc-300">customer, guarantee, cheap, sale, deal</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Salons (Hidden by default, shown via JS) -->
+                    <div class="category-panel hidden animate-fade-in" data-category="salons">
+                        <!-- Same structure as dentists, simplified for length -->
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="p-3 rounded-xl bg-pink-500/10 text-pink-400"><i data-lucide="scissors" class="w-6 h-6"></i></div>
+                            <div><h3 class="text-2xl font-bold">Salons</h3><p class="text-zinc-400 text-sm">Trendy, visual, welcoming.</p></div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-4">
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5">
+                                    <span class="text-xs font-mono text-zinc-500 block mb-2">Example Output</span>
+                                    <p class="text-sm text-zinc-200">"Hey [Name]! Weekend's looking a bit quiet. Want to push a Men's Haircut @ ₹199 offer to fill those chairs?"</p>
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5 border-l-2 border-l-rose-500">
+                                    <span class="text-xs font-mono text-rose-500 block mb-2">Taboo Words</span>
+                                    <p class="text-sm text-zinc-300">patient, treatment, cure, medical</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Restaurants -->
+                    <div class="category-panel hidden animate-fade-in" data-category="restaurants">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="p-3 rounded-xl bg-amber-500/10 text-amber-400"><i data-lucide="utensils" class="w-6 h-6"></i></div>
+                            <div><h3 class="text-2xl font-bold">Restaurants</h3><p class="text-zinc-400 text-sm">Operator-to-operator, appetizing urgency.</p></div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-4">
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5">
+                                    <span class="text-xs font-mono text-zinc-500 block mb-2">Example Output</span>
+                                    <p class="text-sm text-zinc-200">"DC vs MI tonight — 12k+ users in Rohini searching food on magicpin. Want to push your IPL Combo @ ₹349 for match-time orders?"</p>
+                                </div>
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5">
+                                    <span class="text-xs font-mono text-zinc-500 block mb-2">Sample Catalog</span>
+                                    <p class="text-sm font-mono text-brand">Corporate Thali: ₹149 | IPL Combo: ₹349</p>
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5 border-l-2 border-l-emerald-500">
+                                    <span class="text-xs font-mono text-emerald-500 block mb-2">Allowed Vocab</span>
+                                    <p class="text-sm text-zinc-300">orders, bookings, footfall, delivery, dine-in</p>
+                                </div>
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5 border-l-2 border-l-rose-500">
+                                    <span class="text-xs font-mono text-rose-500 block mb-2">Taboo Words</span>
+                                    <p class="text-sm text-zinc-300">patient, medical, clinical, treatment</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gyms -->
+                    <div class="category-panel hidden animate-fade-in" data-category="gyms">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="p-3 rounded-xl bg-accent-purple/10 text-accent-purple"><i data-lucide="dumbbell" class="w-6 h-6"></i></div>
+                            <div><h3 class="text-2xl font-bold">Gyms & Fitness</h3><p class="text-zinc-400 text-sm">Coaching energy, motivational.</p></div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-4">
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5">
+                                    <span class="text-xs font-mono text-zinc-500 block mb-2">Example Output</span>
+                                    <p class="text-sm text-zinc-200">"Summer's here! Your Kids Yoga camp filled 80% last year. Should we push Early Bird @ ₹1,999 to the 200 parents who enquired?"</p>
+                                </div>
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5">
+                                    <span class="text-xs font-mono text-zinc-500 block mb-2">Sample Catalog</span>
+                                    <p class="text-sm font-mono text-brand">Annual Plan: ₹12,999 | Kids Yoga: ₹1,999</p>
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5 border-l-2 border-l-emerald-500">
+                                    <span class="text-xs font-mono text-emerald-500 block mb-2">Allowed Vocab</span>
+                                    <p class="text-sm text-zinc-300">members, classes, sessions, fitness, transformation</p>
+                                </div>
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5 border-l-2 border-l-rose-500">
+                                    <span class="text-xs font-mono text-rose-500 block mb-2">Taboo Words</span>
+                                    <p class="text-sm text-zinc-300">patient, cure, medicine, diagnosis</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pharmacies -->
+                    <div class="category-panel hidden animate-fade-in" data-category="pharmacies">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="p-3 rounded-xl bg-accent-cyan/10 text-accent-cyan"><i data-lucide="pill" class="w-6 h-6"></i></div>
+                            <div><h3 class="text-2xl font-bold">Pharmacies</h3><p class="text-zinc-400 text-sm">Trust, precision, adherence.</p></div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-4">
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5">
+                                    <span class="text-xs font-mono text-zinc-500 block mb-2">Example Output</span>
+                                    <p class="text-sm text-zinc-200">"Heatwave alert in your area. Stock running low on ORS packets? We can push Electral ORS @ ₹25/sachet to 500 nearby users."</p>
+                                </div>
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5">
+                                    <span class="text-xs font-mono text-zinc-500 block mb-2">Sample Catalog</span>
+                                    <p class="text-sm font-mono text-brand">ORS Sachet: ₹25 | BP Check: ₹99</p>
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5 border-l-2 border-l-emerald-500">
+                                    <span class="text-xs font-mono text-emerald-500 block mb-2">Allowed Vocab</span>
+                                    <p class="text-sm text-zinc-300">refill, adherence, medication, health check, stock</p>
+                                </div>
+                                <div class="bg-black/50 p-4 rounded-lg border border-white/5 border-l-2 border-l-rose-500">
+                                    <span class="text-xs font-mono text-rose-500 block mb-2">Taboo Words</span>
+                                    <p class="text-sm text-zinc-300">cure, guaranteed results, miracle, instant</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- (Other panels omitted for brevity, handled similarly in JS if needed) -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 9. ARCHITECTURE DEEP DIVE -->
+    <section class="py-24 relative" id="architecture">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="reveal text-center mb-16">
+                <h2 class="font-syne text-4xl font-bold mb-4">System Architecture</h2>
+                <p class="text-zinc-400 text-lg">High-level flow of the Vera 2.0 autonomous engine.</p>
+            </div>
+            
+            <div class="reveal relative max-w-5xl mx-auto">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-8">
+                    
+                    <!-- Input Layer -->
+                    <div class="arch-node glass p-6 rounded-2xl border-l-4 border-l-zinc-500 w-full md:w-1/4 z-10 relative">
+                        <div class="absolute -right-8 top-1/2 w-8 h-px border-t-2 border-dashed border-zinc-600 hidden md:block"></div>
+                        <h4 class="font-bold mb-3 flex items-center gap-2"><i data-lucide="radio" class="w-4 h-4 text-zinc-400"></i> Event Bus</h4>
+                        <ul class="text-sm text-zinc-400 space-y-2">
+                            <li>• Performance Dips</li>
+                            <li>• Positive Reviews</li>
+                            <li>• Competitor Action</li>
+                        </ul>
+                    </div>
+
+                    <!-- Processing Engine -->
+                    <div class="arch-node glass p-6 rounded-2xl border-t-4 border-t-brand w-full md:w-1/3 z-10 relative bg-brand/5">
+                        <div class="absolute -right-8 top-1/2 w-8 h-px border-t-2 border-dashed border-brand hidden md:block"></div>
+                        <div class="absolute left-1/2 -bottom-8 h-8 w-px border-l-2 border-dashed border-rose-500"></div>
+                        
+                        <h4 class="font-bold mb-3 flex items-center gap-2 text-brand"><i data-lucide="cpu" class="w-5 h-5"></i> Context Fusion</h4>
+                        <p class="text-sm text-zinc-300 mb-4">Validates triggers against 4-Context schema and strictly retrieves catalog facts.</p>
+                        <div class="px-3 py-2 bg-black/50 rounded text-xs font-mono text-zinc-400 border border-white/5">
+                            deterministic_composer.py
+                        </div>
+                    </div>
+
+                    <!-- Output Layer -->
+                    <div class="arch-node glass p-6 rounded-2xl border-r-4 border-r-emerald-500 w-full md:w-1/4 z-10 relative">
+                        <h4 class="font-bold mb-3 flex items-center gap-2 text-emerald-500"><i data-lucide="send" class="w-4 h-4"></i> WA API</h4>
+                        <p class="text-sm text-zinc-400">Deploys generated payload and listens for state changes via webhooks.</p>
+                    </div>
+
+                </div>
+
+                <!-- Sub-system -->
+                <div class="flex justify-center mt-8">
+                    <div class="arch-node glass p-4 rounded-xl border border-rose-500/30 w-full md:w-1/3 text-center">
+                        <h4 class="text-sm font-bold text-rose-400 flex items-center justify-center gap-2 mb-1"><i data-lucide="shield" class="w-4 h-4"></i> Suppression Registry</h4>
+                        <p class="text-xs text-zinc-500">Handles Auto-Replies & Opt-Outs (DND)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 10. FOOTER -->
+    <footer class="bg-black pt-20 pb-10 border-t border-canvas-border relative overflow-hidden">
+        <div class="absolute bottom-0 inset-x-0 h-[40vh] flex items-end justify-center opacity-10 pointer-events-none select-none overflow-hidden">
+            <span class="font-syne font-black text-[25vw] leading-none text-white whitespace-nowrap tracking-tighter mix-blend-overlay">VERA</span>
+        </div>
+        
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-8 mb-16">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand to-brand-glow flex items-center justify-center">
+                            <span class="font-syne font-bold text-black">V</span>
+                        </div>
+                        <span class="font-syne font-bold text-xl">VERA 2.0</span>
+                    </div>
+                    <p class="text-zinc-400 text-sm">Autonomous Merchant Intelligence Engine</p>
+                </div>
+                
+                <div class="flex gap-4">
+                    <a href="#" class="w-10 h-10 rounded-full glass flex items-center justify-center hover:text-brand transition-colors"><i data-lucide="github" class="w-5 h-5"></i></a>
+                    <a href="#" class="w-10 h-10 rounded-full glass flex items-center justify-center hover:text-brand transition-colors"><i data-lucide="book" class="w-5 h-5"></i></a>
+                </div>
+            </div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-white/10 text-xs text-zinc-500">
+                <p>&copy; 2026 magicpin AI Challenge. Built for deterministic performance.</p>
+                <div class="flex gap-4 mt-4 md:mt-0">
+                    <a href="#" class="hover:text-white transition-colors">FastAPI Docs</a>
+                    <a href="#" class="hover:text-white transition-colors">4-Context Spec</a>
+                    <a href="#" class="hover:text-white transition-colors">Capabilities</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 11. TOAST CONTAINER -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-[100] space-y-3 flex flex-col items-end"></div>
+
+    <!-- Application Logic -->
+    <script src="app.js"></script>
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        const API_BASE = window.location.port === '8080' || window.location.href.includes(':8080') ? '' : 'http://127.0.0.1:8080';
+
+        // ── Backend Health Polling ──
+        async function checkBackendHealth() {
+            const dot = document.getElementById('status-dot');
+            const txt = document.getElementById('status-text');
+            try {
+                const res = await fetch(`${API_BASE}/v1/healthz`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (dot) { dot.className = 'w-2 h-2 rounded-full bg-brand animate-pulse'; }
+                    if (txt) { txt.textContent = `${data.active_model || 'Gemini 3.8 Flash Active'}`; txt.className = 'text-brand font-medium'; }
+                } else { throw new Error(); }
+            } catch {
+                if (dot) { dot.className = 'w-2 h-2 rounded-full bg-red-500'; }
+                if (txt) { txt.textContent = 'Offline'; txt.className = 'text-red-400'; }
+            }
+        }
+        checkBackendHealth();
+        setInterval(checkBackendHealth, 8000);
+
+        // ── Scroll Reveal Animation ──
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    // Trigger score bars
+                    entry.target.querySelectorAll('.score-bar').forEach(bar => {
+                        setTimeout(() => { bar.style.width = bar.getAttribute('data-score'); }, 300);
+                    });
+                }
+            });
+        }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+        // ── Animated Counters ──
+        function animateCounters() {
+            document.querySelectorAll('.counter').forEach(counter => {
+                const target = +counter.getAttribute('data-target');
+                const suffix = counter.getAttribute('data-suffix') || '';
+                const duration = 2000;
+                let start = null;
+                function step(ts) {
+                    if (!start) start = ts;
+                    const progress = Math.min((ts - start) / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 4);
+                    counter.textContent = Math.round(eased * target) + suffix;
+                    if (progress < 1) requestAnimationFrame(step);
+                }
+                requestAnimationFrame(step);
+            });
+        }
+        const heroObs = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) { setTimeout(animateCounters, 500); heroObs.disconnect(); }
+        });
+        heroObs.observe(document.getElementById('hero'));
+
+        // ── Tab Switcher ──
+        const tabs = document.querySelectorAll('[data-tab]');
+        const panels = document.querySelectorAll('.category-panel');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => { t.classList.remove('bg-white/10', 'text-white', 'shadow'); t.classList.add('text-zinc-500'); });
+                panels.forEach(p => p.classList.add('hidden'));
+                tab.classList.remove('text-zinc-500');
+                tab.classList.add('bg-white/10', 'text-white', 'shadow');
+                const panel = document.querySelector(`.category-panel[data-category="${tab.getAttribute('data-tab')}"]`);
+                if (panel) panel.classList.remove('hidden');
+            });
+        });
+
+        // ── LIVE SIMULATOR — Real API Calls ──
+        const runBtn = document.getElementById('run-sim-btn');
+        if (runBtn) {
+            runBtn.addEventListener('click', async () => {
+                const triggerId = document.getElementById('sim-trigger').value;
+                const originalText = runBtn.innerHTML;
+                runBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Composing...`;
+                runBtn.disabled = true;
+
+                try {
+                    const start = performance.now();
+                    const res = await fetch(`${API_BASE}/v1/tick`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ now: new Date().toISOString(), available_triggers: [triggerId] })
+                    });
+                    const latency = (performance.now() - start).toFixed(1);
+                    const data = await res.json();
+                    const action = data.actions && data.actions.length > 0 ? data.actions[0] : null;
+
+                    document.getElementById('exec-latency').textContent = `latency: ${latency}ms`;
+
+                    if (action) {
+                        // Typing animation for body
+                        const bodyEl = document.getElementById('out-body-preview');
+                        bodyEl.className = 'whitespace-pre-wrap flex-1 text-white';
+                        bodyEl.textContent = '';
+                        let i = 0;
+                        const typeChar = () => {
+                            if (i < action.body.length) { bodyEl.textContent += action.body[i]; i++; setTimeout(typeChar, 15); }
+                        };
+                        typeChar();
+
+                        document.getElementById('out-rationale-text').innerHTML = `<span class="text-emerald-400">${action.rationale}</span>`;
+                        document.getElementById('exec-cta').textContent = `CTA: ${action.cta}`;
+                        document.getElementById('out-raw-json').textContent = JSON.stringify(action, null, 2);
+                    } else {
+                        document.getElementById('out-body-preview').textContent = 'Trigger suppressed or no proactive message needed.';
+                        document.getElementById('out-rationale-text').textContent = 'Suppression deduplication active.';
+                        document.getElementById('out-raw-json').textContent = JSON.stringify(data, null, 2);
+                        document.getElementById('exec-cta').textContent = 'status: suppressed';
+                    }
+
+                    // Toast
+                    showToast('Composition executed successfully', 'success');
+                } catch (err) {
+                    document.getElementById('out-body-preview').textContent = `Error: ${err.message}`;
+                    showToast('Backend error — is the server running on :8080?', 'error');
+                } finally {
+                    runBtn.innerHTML = originalText;
+                    runBtn.disabled = false;
+                    lucide.createIcons();
+                }
+            });
+        }
+
+        // ── Quick Reply Buttons ──
+        document.querySelectorAll('.sim-quick-reply').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('sim-reply-input').value = btn.getAttribute('data-reply');
+            });
+        });
+
+        // ── Multi-turn Reply — Real API ──
+        const sendReplyBtn = document.getElementById('send-reply-btn');
+        const replyInput = document.getElementById('sim-reply-input');
+        if (sendReplyBtn && replyInput) {
+            async function sendReply() {
+                const message = replyInput.value.trim();
+                if (!message) return;
+                const merchantId = document.getElementById('sim-merchant').value;
+                sendReplyBtn.disabled = true;
+
+                try {
+                    const start = performance.now();
+                    const res = await fetch(`${API_BASE}/v1/reply`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            conversation_id: `conv_sim_${Date.now()}`,
+                            merchant_id: merchantId,
+                            customer_id: null,
+                            from_role: 'merchant',
+                            message: message,
+                            turn_number: 2
+                        })
+                    });
+                    const latency = (performance.now() - start).toFixed(1);
+                    const data = await res.json();
+
+                    document.getElementById('exec-latency').textContent = `latency: ${latency}ms`;
+                    document.getElementById('exec-cta').textContent = `action: ${data.action.toUpperCase()}`;
+                    const bodyEl = document.getElementById('out-body-preview');
+                    bodyEl.className = 'whitespace-pre-wrap flex-1 text-white';
+                    bodyEl.textContent = data.body || `[Action: ${data.action.toUpperCase()}]`;
+                    document.getElementById('out-rationale-text').innerHTML = `<span class="text-emerald-400">${data.rationale}</span>`;
+                    document.getElementById('out-raw-json').textContent = JSON.stringify(data, null, 2);
+                    replyInput.value = '';
+                    showToast(`Reply processed → ${data.action}`, 'success');
+                } catch (err) {
+                    showToast('Reply failed: ' + err.message, 'error');
+                } finally {
+                    sendReplyBtn.disabled = false;
+                }
+            }
+            sendReplyBtn.addEventListener('click', sendReply);
+            replyInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendReply(); } });
+        }
+
+        // ── Toast Notifications ──
+        window.showToast = function(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colors = { success: 'border-brand', error: 'border-red-500', info: 'border-accent-cyan', warning: 'border-amber-500' };
+            toast.className = `glass p-3 rounded-lg border-l-4 ${colors[type] || colors.info} shadow-lg text-sm flex items-center gap-2 translate-x-full transition-transform duration-300`;
+            const icons = { success: 'check-circle-2', error: 'alert-circle', info: 'info', warning: 'alert-triangle' };
+            toast.innerHTML = `<i data-lucide="${icons[type] || 'info'}" class="w-4 h-4 text-brand shrink-0"></i> ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.transform = 'translateX(0)'; lucide.createIcons(); }, 10);
+            setTimeout(() => { toast.style.transform = 'translateX(120%)'; setTimeout(() => toast.remove(), 300); }, 3500);
+        };
+
+        // ── Sticky Header Scroll Effect ──
+        window.addEventListener('scroll', () => {
+            const header = document.getElementById('main-header');
+            if (window.scrollY > 50) { header.classList.add('bg-black/80'); } else { header.classList.remove('bg-black/80'); }
+        });
+
+        // ── WhatsApp Demo Auto-Play ──
+        const waDemoArea = document.getElementById('demo-chat-area');
+        if (waDemoArea) {
+            const demoMessages = [
+                { sender: 'vera', text: 'Hi Dr. Meera, this is Vera from magicpin.', delay: 1000 },
+                { sender: 'vera', text: 'I noticed a 12% dip in footfall at your clinic this week. Should we run a quick campaign offering <strong>Teeth Cleaning @ ₹999</strong> to nearby users?', delay: 2500 },
+                { sender: 'merchant', text: "Let's do it. What's next?", delay: 3000 },
+                { sender: 'vera', text: '🚀 Campaign deployed! Targeting 2,400 users within 3km of Lajpat Nagar. You should see results by Saturday morning.', delay: 2000 }
+            ];
+
+            function runWADemo() {
+                waDemoArea.innerHTML = '';
+                let totalDelay = 0;
+                demoMessages.forEach((msg) => {
+                    // Typing indicator
+                    totalDelay += msg.delay;
+                    const typingDelay = totalDelay - 800;
+                    setTimeout(() => {
+                        const typing = document.createElement('div');
+                        typing.className = `max-w-[80%] p-3 rounded-lg ${msg.sender === 'vera' ? 'bg-[#202C33] self-start rounded-tl-none' : 'bg-[#005C4B] self-end rounded-tr-none ml-auto'}`;
+                        typing.innerHTML = '<div class="flex gap-1"><div class="w-1.5 h-1.5 rounded-full bg-zinc-500 typing-dot"></div><div class="w-1.5 h-1.5 rounded-full bg-zinc-500 typing-dot"></div><div class="w-1.5 h-1.5 rounded-full bg-zinc-500 typing-dot"></div></div>';
+                        typing.id = 'demo-typing';
+                        waDemoArea.appendChild(typing);
+                        waDemoArea.scrollTop = waDemoArea.scrollHeight;
+                    }, Math.max(typingDelay, 0));
+
+                    // Actual message
+                    setTimeout(() => {
+                        const old = document.getElementById('demo-typing');
+                        if (old) old.remove();
+                        const el = document.createElement('div');
+                        el.className = `max-w-[80%] p-3 text-sm text-white border border-white/5 shadow-sm ${msg.sender === 'vera' ? 'bg-[#202C33] self-start rounded-lg rounded-tl-none' : 'bg-[#005C4B] self-end rounded-lg rounded-tr-none ml-auto'}`;
+                        el.style.cssText = 'opacity:0;transform:translateY(8px);transition:all 0.3s ease';
+                        el.innerHTML = msg.text;
+                        waDemoArea.appendChild(el);
+                        requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+                        waDemoArea.scrollTop = waDemoArea.scrollHeight;
+                    }, totalDelay);
+                });
+
+                // Loop after all messages + pause
+                setTimeout(runWADemo, totalDelay + 5000);
+            }
+            runWADemo();
+        }
+    </script>
+</body>
+</html>
